@@ -82,6 +82,37 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
         }
 
         [Fact]
+        public async Task TakeMessageHeadersSucceedsWhenHeaderValueContainsUTF8()
+        {
+            string headerName = "Header";
+            string headerValue = "François";
+            string headerLine = $"{headerName}: {headerValue}\r\n";
+            _http1Connection.Reset();
+
+            await _application.Output.WriteAsync(Encoding.UTF8.GetBytes($"{headerLine}\r\n"));
+            var readableBuffer = (await _transport.Input.ReadAsync()).Buffer;
+
+            _http1Connection.TakeMessageHeaders(readableBuffer, out _consumed, out _examined);
+            _transport.Input.AdvanceTo(_consumed, _examined);
+
+            Assert.Equal(headerValue, _http1Connection.RequestHeaders[headerName]);
+        }
+
+        [Fact]
+        public async Task TakeMessageHeadersThrowsWhenHeaderValueContainsExtendedASCII()
+        {
+            string headerName = "Header";
+            string headerValue = "François";
+            string headerLine = $"{headerName}: {headerValue}\r\n";
+            _http1Connection.Reset();
+
+            await _application.Output.WriteAsync(Encoding.GetEncoding("ISO-8859-1").GetBytes($"{headerLine}\r\n"));
+            var readableBuffer = (await _transport.Input.ReadAsync()).Buffer;
+
+            var exception = Assert.Throws<InvalidOperationException>(() => _http1Connection.TakeMessageHeaders(readableBuffer, out _consumed, out _examined));
+        }
+
+        [Fact]
         public async Task TakeMessageHeadersThrowsWhenHeadersExceedTotalSizeLimit()
         {
             const string headerLine = "Header: value\r\n";

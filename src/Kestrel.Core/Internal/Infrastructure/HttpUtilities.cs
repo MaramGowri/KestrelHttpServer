@@ -85,8 +85,29 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
             }
         }
 
-        // Review: yea, I need to check if any of these calls are used for something other than header values and query strings and wether it's safe to allow UTF8
         public static unsafe string GetAsciiStringNonNullCharacters(this Span<byte> span)
+        {
+            if (span.IsEmpty)
+            {
+                return string.Empty;
+            }
+
+            var asciiString = new string('\0', span.Length);
+
+            fixed (char* output = asciiString)
+            fixed (byte* buffer = &MemoryMarshal.GetReference(span))
+            {
+                // This version if AsciiUtilities returns null if there are any null (0 byte) characters
+                // in the string
+                if (!StringUtilities.TryGetAsciiString(buffer, output, span.Length))
+                {
+                    throw new InvalidOperationException();
+                }
+            }
+            return asciiString;
+        }
+
+        public static unsafe string GetAsciiOrUTF8StringNonNullCharacters(this Span<byte> span)
         {
             if (span.IsEmpty)
             {
@@ -102,13 +123,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure
                 // in the string
                 if (!StringUtilities.TryGetAsciiString(buffer, output, span.Length))
                 {
-                    // REVIEW: yea this isn't efficient
-                    for (int i = 0; i < span.Length; i++)
+                    // null characters are considered invalid
+                    if (span.IndexOf((byte)0) != -1)
                     {
-                        if (buffer[i] == 0)
-                        {
-                            throw new InvalidOperationException();
-                        }
+                        throw new InvalidOperationException();
                     }
 
                     try
