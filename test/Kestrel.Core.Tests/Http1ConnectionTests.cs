@@ -85,7 +85,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
         public async Task TakeMessageHeadersSucceedsWhenHeaderValueContainsUTF8()
         {
             string headerName = "Header";
-            string headerValue = "François";
+            string headerValue = "FranÃ§ois";
             string headerLine = $"{headerName}: {headerValue}\r\n";
             _http1Connection.Reset();
 
@@ -102,7 +102,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
         public async Task TakeMessageHeadersThrowsWhenHeaderValueContainsExtendedASCII()
         {
             string headerName = "Header";
-            string headerValue = "François";
+            string headerValue = "FranÃ§ois";
             string headerLine = $"{headerName}: {headerValue}\r\n";
             _http1Connection.Reset();
 
